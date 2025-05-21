@@ -85,4 +85,4 @@ LABEL maintainer="AptS-1547 <apts-1547@esaps.net>" \
       nginx_version="1.26.3" \
       modsecurity_version="v3.0.14" \
       modsecurity_nginx_version="v1.0.3" \
-      build_date="2025-05-21T04:47:38Z"
+      build_date="2025-05-21T05:01:35Z"

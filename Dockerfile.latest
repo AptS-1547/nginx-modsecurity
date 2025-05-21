@@ -1,4 +1,4 @@
-FROM nginx:1.22.1-alpine AS builder
+FROM nginx:1.26.3-alpine AS builder
 
 # 设置 ModSecurity 版本
 ENV MODSECURITY_VERSION=v3.0.14
@@ -33,9 +33,9 @@ RUN apk add --no-cache --virtual .build-deps \
 WORKDIR /opt
 
 # 下载 Nginx 源码
-RUN wget https://nginx.org/download/nginx-1.22.1.tar.gz \
-    && tar -xzf nginx-1.22.1.tar.gz \
-    && rm nginx-1.22.1.tar.gz
+RUN wget https://nginx.org/download/nginx-1.26.3.tar.gz \
+    && tar -xzf nginx-1.26.3.tar.gz \
+    && rm nginx-1.26.3.tar.gz
 
 # 下载 ModSecurity
 RUN git clone --depth 1 -b ${MODSECURITY_VERSION} https://github.com/owasp-modsecurity/ModSecurity.git
@@ -54,7 +54,7 @@ RUN cd /opt/ModSecurity \
     && make clean
 
 # 编译 Nginx 与 ModSecurity 模块
-RUN cd /opt/nginx-1.22.1 \
+RUN cd /opt/nginx-1.26.3 \
     && ./configure --with-compat --add-dynamic-module=/opt/ModSecurity-nginx \
     && make modules \
     && cp objs/ngx_http_modsecurity_module.so /etc/nginx/modules \
@@ -62,7 +62,7 @@ RUN cd /opt/nginx-1.22.1 \
     && cp /opt/ModSecurity/unicode.mapping /etc/nginx/modsec/
 
 # 最终镜像
-FROM nginx:1.22.1-alpine AS final
+FROM nginx:1.26.3-alpine AS final
 
 # 安装运行时依赖
 RUN apk add --no-cache --purge --virtual .runtime-deps \
@@ -82,7 +82,7 @@ COPY --from=builder /etc/nginx/modsec/unicode.mapping /etc/nginx/modsec/
 
 # 添加构建信息标签
 LABEL maintainer="AptS-1547 <apts-1547@esaps.net>" \
-      nginx_version="1.22.1" \
+      nginx_version="1.26.3" \
       modsecurity_version="v3.0.14" \
       modsecurity_nginx_version="v1.0.3" \
-      build_date="2025-05-21T05:01:23Z"
+      build_date="2025-05-21T05:01:35Z"
