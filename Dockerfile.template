@@ -20,13 +20,12 @@ RUN apk add --no-cache --virtual .build-deps \
         lmdb-dev \
         lua5.4-dev \
         make \
-        pcre-dev \
         ssdeep \
         yajl-dev \
         zlib-dev \
         libxml2-dev \
         geoip-dev \
-        pcre2-dev \
+        pcre-dev \
         linux-headers \
         wget
 
@@ -63,7 +62,7 @@ RUN cd /opt/nginx-{{NGINX_VERSION}} \
     && cp /opt/ModSecurity/unicode.mapping /etc/nginx/modsec/
 
 # 最终镜像
-FROM nginx:{{NGINX_VERSION}}-alpine
+FROM nginx:{{NGINX_VERSION}}-alpine AS final
 
 # 安装运行时依赖
 RUN apk add --no-cache --purge --virtual .runtime-deps \
@@ -71,6 +70,8 @@ RUN apk add --no-cache --purge --virtual .runtime-deps \
         yajl \
         libstdc++ \
         pcre \
+        lmdb \
+        geoip \
         libxml2
 
 # 复制配置文件和模块

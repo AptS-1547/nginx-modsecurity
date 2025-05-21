@@ -20,13 +20,12 @@ RUN apk add --no-cache --virtual .build-deps \
         lmdb-dev \
         lua5.4-dev \
         make \
-        pcre-dev \
         ssdeep \
         yajl-dev \
         zlib-dev \
         libxml2-dev \
         geoip-dev \
-        pcre2-dev \
+        pcre-dev \
         linux-headers \
         wget
 
@@ -63,7 +62,7 @@ RUN cd /opt/nginx-1.26.3 \
     && cp /opt/ModSecurity/unicode.mapping /etc/nginx/modsec/
 
 # 最终镜像
-FROM nginx:1.26.3-alpine
+FROM nginx:1.26.3-alpine AS final
 
 # 安装运行时依赖
 RUN apk add --no-cache --purge --virtual .runtime-deps \
@@ -71,6 +70,8 @@ RUN apk add --no-cache --purge --virtual .runtime-deps \
         yajl \
         libstdc++ \
         pcre \
+        lmdb \
+        geoip \
         libxml2
 
 # 复制配置文件和模块
@@ -84,4 +85,4 @@ LABEL maintainer="AptS-1547 <apts-1547@esaps.net>" \
       nginx_version="1.26.3" \
       modsecurity_version="v3.0.14" \
       modsecurity_nginx_version="v1.0.3" \
-      build_date="2025-05-21T04:03:54Z"
+      build_date="2025-05-21T04:47:38Z"
