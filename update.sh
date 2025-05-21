@@ -45,9 +45,6 @@ MODSECURITY_NGINX_VERSION=$MODSECURITY_NGINX_VERSION
 BUILD_DATE=$BUILD_DATE
 EOF
 
-# 复制其他必要文件到版本化目录
-cp nginx.conf "$VERSION_DIR/"
-
 # 创建一个README文件，记录版本信息
 cat > "$VERSION_DIR/README.md" << EOF
 # ModSecurity with Nginx

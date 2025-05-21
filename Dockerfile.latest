@@ -18,7 +18,7 @@ RUN apk add --no-cache --virtual .build-deps \
         git \
         libtool \
         lmdb-dev \
-        lua-dev \
+        lua5.4-dev \
         make \
         pcre-dev \
         ssdeep \
@@ -39,10 +39,10 @@ RUN wget https://nginx.org/download/nginx-1.26.3.tar.gz \
     && rm nginx-1.26.3.tar.gz
 
 # 下载 ModSecurity
-RUN git clone --depth 1 -b ${MODSECURITY_VERSION} https://github.com/SpiderLabs/ModSecurity.git
+RUN git clone --depth 1 -b ${MODSECURITY_VERSION} https://github.com/owasp-modsecurity/ModSecurity.git
 
 # 下载 ModSecurity-nginx 连接器
-RUN git clone --depth 1 -b ${MODSECURITY_NGINX_VERSION} https://github.com/SpiderLabs/ModSecurity-nginx.git
+RUN git clone --depth 1 -b ${MODSECURITY_NGINX_VERSION} https://github.com/owasp-modsecurity/ModSecurity-nginx.git
 
 # 编译 ModSecurity
 RUN cd /opt/ModSecurity \
@@ -67,7 +67,7 @@ FROM nginx:1.26.3-alpine
 
 # 安装运行时依赖
 RUN apk add --no-cache --purge --virtual .runtime-deps \
-        lua5.1 \
+        lua5.4 \
         yajl \
         libstdc++ \
         pcre \
@@ -84,4 +84,4 @@ LABEL maintainer="AptS-1547 <apts-1547@esaps.net>" \
       nginx_version="1.26.3" \
       modsecurity_version="v3.0.14" \
       modsecurity_nginx_version="v1.0.3" \
-      build_date="2025-05-21T02:54:20Z"
+      build_date="2025-05-21T04:03:54Z"
