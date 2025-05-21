@@ -4,6 +4,7 @@
 NGINX_VERSION=${1:-"1.26.3"}
 MODSECURITY_VERSION=${2:-"v3.0.14"}
 MODSECURITY_NGINX_VERSION=${3:-"v1.0.3"}
+AUTO_PUSH=${4:-"false"}  # 新增参数，控制是否自动提交和推送
 
 # 移除版本号中的 'v' 前缀，便于文件夹命名
 MOD_VERSION=${MODSECURITY_VERSION#v}
@@ -21,6 +22,7 @@ echo "Nginx: $NGINX_VERSION"
 echo "ModSecurity: $MODSECURITY_VERSION"
 echo "ModSecurity-nginx: $MODSECURITY_NGINX_VERSION"
 echo "导出目录: $VERSION_DIR"
+echo "自动提交并推送: $AUTO_PUSH"
 echo
 
 # 生成版本化目录的 Dockerfile
@@ -73,3 +75,19 @@ echo "更新完成！文件已导出到 $VERSION_DIR 目录"
 echo "同时已生成 Dockerfile.latest 和 versions.env 文件在根目录"
 echo "您可以运行以下命令构建镜像:"
 echo "cd $VERSION_DIR && docker build -t modsecurity:$NGINX_VERSION-$MOD_VERSION ."
+
+# 如果设置了自动提交和推送
+if [ "$AUTO_PUSH" = "true" ]; then
+    echo "正在提交更改..."
+    git add "$VERSION_DIR" Dockerfile.latest versions.env latest_version
+    git commit -m "更新 Nginx 至 $NGINX_VERSION, ModSecurity 至 $MODSECURITY_VERSION"
+    
+    echo "正在推送到远程仓库..."
+    git push
+    
+    if [ $? -eq 0 ]; then
+        echo "提交和推送成功完成！"
+    else
+        echo "推送失败，请手动检查并推送。"
+    fi
+fi
