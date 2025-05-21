@@ -18,7 +18,7 @@ RUN apk add --no-cache --virtual .build-deps \
         git \
         libtool \
         lmdb-dev \
-        lua5.4-dev \
+        lua5.3-dev \
         make \
         curl-dev \
         pcre2-dev \
@@ -67,7 +67,7 @@ FROM nginx:1.16.1-alpine AS final
 
 # 安装运行时依赖
 RUN apk add --no-cache --purge --virtual .runtime-deps \
-        lua5.4 \
+        lua5.3 \
         yajl \
         libstdc++ \
         pcre2 \
