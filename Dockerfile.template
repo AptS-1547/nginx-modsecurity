@@ -49,7 +49,7 @@ RUN cd /opt/ModSecurity \
     && git submodule init \
     && git submodule update \
     && ./build.sh \
-    && ./configure \
+    && ./configure --prefix=/usr/local/modsecurity \
     && make \
     && make install \
     && make clean
@@ -70,7 +70,8 @@ RUN apk add --no-cache --purge --virtual .runtime-deps \
         lua5.1 \
         yajl \
         libstdc++ \
-        pcre
+        pcre \
+        libxml2
 
 # 复制配置文件和模块
 RUN sed -i '1i load_module modules/ngx_http_modsecurity_module.so;\n' /etc/nginx/nginx.conf

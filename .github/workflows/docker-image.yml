@@ -9,6 +9,7 @@ on:
       - '.github/workflows/docker-image.yml'
       - 'update.sh'
       - 'Dockerfile.template'
+      - 'latest_version'
     tags:
       - 'v*'
   workflow_dispatch:  # 添加手动触发选项
@@ -64,6 +65,21 @@ jobs:
           exit 1
         fi
 
+        # 检查是否为最新版本
+        if [ -f "latest_version" ]; then
+          LATEST_VERSION=$(cat latest_version)
+          if [ "${NGINX_VERSION}" == "${LATEST_VERSION}" ]; then
+            echo "is_latest=true" >> $GITHUB_OUTPUT
+            echo "当前版本 ${NGINX_VERSION} 是最新版本，将使用 latest 标签"
+          else
+            echo "is_latest=false" >> $GITHUB_OUTPUT
+            echo "当前版本 ${NGINX_VERSION} 不是最新版本 ${LATEST_VERSION}，不会使用 latest 标签"
+          fi
+        else
+          echo "latest_version 文件不存在，默认当前版本为最新版本"
+          echo "is_latest=true" >> $GITHUB_OUTPUT
+        fi
+
     - name: Extract metadata for Docker
       id: meta
       uses: docker/metadata-action@v5
@@ -72,7 +88,7 @@ jobs:
           e1saps/nginx-modsecurity
           ghcr.io/${{ github.repository }}
         tags: |
-          type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && steps.versions.outputs.is_latest == 'true' }}
           type=raw,value=${{ steps.versions.outputs.nginx_version }}
           type=raw,value=${{ steps.versions.outputs.nginx_version }}-${{ steps.versions.outputs.modsec_version_clean }}
           type=ref,event=tag

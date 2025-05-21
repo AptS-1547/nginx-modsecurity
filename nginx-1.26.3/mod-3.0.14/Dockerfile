@@ -4,9 +4,8 @@ FROM nginx:1.26.3-alpine AS builder
 ENV MODSECURITY_VERSION=v3.0.14
 ENV MODSECURITY_NGINX_VERSION=v1.0.3
 
-# 使用国内镜像源
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories \
-    && apk add --no-cache --virtual .build-deps \
+# 安装构建依赖
+RUN apk add --no-cache --virtual .build-deps \
         alpine-sdk \
         autoconf \
         automake \
@@ -50,7 +49,7 @@ RUN cd /opt/ModSecurity \
     && git submodule init \
     && git submodule update \
     && ./build.sh \
-    && ./configure \
+    && ./configure --prefix=/usr/local/modsecurity \
     && make \
     && make install \
     && make clean
@@ -71,7 +70,8 @@ RUN apk add --no-cache --purge --virtual .runtime-deps \
         lua5.1 \
         yajl \
         libstdc++ \
-        pcre
+        pcre \
+        libxml2
 
 # 复制配置文件和模块
 RUN sed -i '1i load_module modules/ngx_http_modsecurity_module.so;\n' /etc/nginx/nginx.conf
@@ -84,4 +84,4 @@ LABEL maintainer="AptS-1547 <apts-1547@esaps.net>" \
       nginx_version="1.26.3" \
       modsecurity_version="v3.0.14" \
       modsecurity_nginx_version="v1.0.3" \
-      build_date="2025-05-21T01:32:54Z"
+      build_date="2025-05-21T02:54:20Z"
