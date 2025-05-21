@@ -1,0 +1,90 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'Dockerfile.latest'
+      - 'versions.env'
+      - '.github/workflows/docker-image.yml'
+      - 'update.sh'
+      - 'Dockerfile.template'
+    tags:
+      - 'v*'
+  workflow_dispatch:  # 添加手动触发选项
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'push' && github.ref_type == 'branch' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Set version variables
+      id: versions
+      run: |
+        # 从 versions.env 文件中提取版本信息
+        if [ -f "versions.env" ]; then
+          source versions.env
+          echo "nginx_version=${NGINX_VERSION}" >> $GITHUB_OUTPUT
+          echo "modsec_version=${MODSECURITY_VERSION}" >> $GITHUB_OUTPUT
+          echo "modsec_version_clean=${MODSECURITY_VERSION#v}" >> $GITHUB_OUTPUT
+          echo "modsec_nginx_version=${MODSECURITY_NGINX_VERSION}" >> $GITHUB_OUTPUT
+          echo "build_date=${BUILD_DATE}" >> $GITHUB_OUTPUT
+          
+          echo "使用 versions.env 中的版本信息:"
+          echo "Nginx: ${NGINX_VERSION}"
+          echo "ModSecurity: ${MODSECURITY_VERSION}"
+          echo "ModSecurity-nginx: ${MODSECURITY_NGINX_VERSION}"
+        else
+          echo "versions.env 文件不存在，请确保它在仓库中并包含正确的版本信息。"
+          exit 1
+        fi
+
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: |
+          e1saps/nginx-modsecurity
+          ghcr.io/${{ github.repository }}
+        tags: |
+          type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+          type=raw,value=${{ steps.versions.outputs.nginx_version }}
+          type=raw,value=${{ steps.versions.outputs.nginx_version }}-${{ steps.versions.outputs.modsec_version_clean }}
+          type=ref,event=tag
+          type=sha,format=short
+        
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.latest
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
