@@ -18,7 +18,7 @@ RUN apk add --no-cache --virtual .build-deps \
         git \
         libtool \
         lmdb-dev \
-        lua5.4-dev \
+        lua5.3-dev \
         make \
         curl-dev \
         pcre2-dev \
@@ -67,7 +67,7 @@ FROM nginx:1.18.0-alpine AS final
 
 # 安装运行时依赖
 RUN apk add --no-cache --purge --virtual .runtime-deps \
-        lua5.4 \
+        lua5.3 \
         yajl \
         libstdc++ \
         pcre2 \
@@ -87,4 +87,4 @@ LABEL maintainer="AptS-1547 <apts-1547@esaps.net>" \
       nginx_version="1.18.0" \
       modsecurity_version="v3.0.14" \
       modsecurity_nginx_version="v1.0.3" \
-      build_date="2025-05-21T08:08:48Z"
+      build_date="2025-05-21T08:29:46Z"
