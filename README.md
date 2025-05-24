@@ -1,6 +1,6 @@
 # Nginx with ModSecurity
 
-![Docker Image CI](https://github.com/e1saps/nginx-modsecurity/workflows/Docker%20Image%20CI/badge.svg)
+![Docker Image CI](https://github.com/AptS-1547/nginx-modsecurity/workflows/Docker%20Image%20CI/badge.svg)
 [![Docker Hub](https://img.shields.io/docker/pulls/e1saps/nginx-modsecurity.svg)](https://hub.docker.com/r/e1saps/nginx-modsecurity)
 [![GitHub Container Registry](https://img.shields.io/badge/GitHub%20Container-Registry-blue)](https://github.com/e1saps/nginx-modsecurity/pkgs/container/nginx-modsecurity)
 
