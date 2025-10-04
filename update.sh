@@ -3,7 +3,7 @@
 # 设置版本
 NGINX_VERSION=${1:-"1.26.3"}
 MODSECURITY_VERSION=${2:-"v3.0.14"}
-MODSECURITY_NGINX_VERSION=${3:-"v1.0.3"}
+MODSECURITY_NGINX_VERSION=${3:-"v1.0.4"}
 AUTO_PUSH=${4:-"false"}  # 新增参数，控制是否自动提交和推送
 
 # 移除版本号中的 'v' 前缀，便于文件夹命名
