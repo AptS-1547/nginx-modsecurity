@@ -9,7 +9,8 @@ on:
       - '.github/workflows/docker-image.yml'
       - 'update.sh'
       - 'Dockerfile.template'
-      - 'latest_version'
+      - 'stable_version'
+      - 'mainline_version'
     tags:
       - 'v*'
   workflow_dispatch:  # 添加手动触发选项
@@ -65,19 +66,34 @@ jobs:
           exit 1
         fi
 
-        # 检查是否为最新版本
-        if [ -f "latest_version" ]; then
-          LATEST_VERSION=$(cat latest_version)
-          if [ "${NGINX_VERSION}" == "${LATEST_VERSION}" ]; then
-            echo "is_latest=true" >> $GITHUB_OUTPUT
-            echo "当前版本 ${NGINX_VERSION} 是最新版本，将使用 latest 标签"
+        # 检查是否为最新主线版本
+        if [ -f "mainline_version" ]; then
+          MAINLINE_VERSION=$(cat mainline_version)
+          if [ "${NGINX_VERSION}" == "${MAINLINE_VERSION}" ]; then
+            echo "is_mainline=true" >> $GITHUB_OUTPUT
+            echo "当前版本 ${NGINX_VERSION} 是最新主线版本，将使用 latest 标签"
           else
-            echo "is_latest=false" >> $GITHUB_OUTPUT
-            echo "当前版本 ${NGINX_VERSION} 不是最新版本 ${LATEST_VERSION}，不会使用 latest 标签"
+            echo "is_mainline=false" >> $GITHUB_OUTPUT
+            echo "当前版本 ${NGINX_VERSION} 不是最新主线版本 ${MAINLINE_VERSION}，不会使用 latest 标签"
           fi
         else
-          echo "latest_version 文件不存在，默认当前版本为最新版本"
-          echo "is_latest=true" >> $GITHUB_OUTPUT
+          echo "mainline_version 文件不存在，默认当前版本不是最新主线版本"
+          echo "is_mainline=false" >> $GITHUB_OUTPUT
+        fi
+
+        # 检查是否为最新稳定版本
+        if [ -f "stable_version" ]; then
+          STABLE_VERSION=$(cat stable_version)
+          if [ "${NGINX_VERSION}" == "${STABLE_VERSION}" ]; then
+            echo "is_stable=true" >> $GITHUB_OUTPUT
+            echo "当前版本 ${NGINX_VERSION} 是最新稳定版本，将使用 stable 标签"
+          else
+            echo "is_stable=false" >> $GITHUB_OUTPUT
+            echo "当前版本 ${NGINX_VERSION} 不是最新稳定版本 ${STABLE_VERSION}，不会使用 stable 标签"
+          fi
+        else
+          echo "stable_version 文件不存在，默认当前版本不是最新稳定版本"
+          echo "is_stable=false" >> $GITHUB_OUTPUT
         fi
 
     - name: Extract metadata for Docker
@@ -88,7 +104,9 @@ jobs:
           e1saps/nginx-modsecurity
           ghcr.io/${{ github.repository }}
         tags: |
-          type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && steps.versions.outputs.is_latest == 'true' }}
+          type=raw,value=latest,enable=${{ steps.versions.outputs.is_mainline == 'true' }}
+          type=raw,value=mainline,enable=${{ steps.versions.outputs.is_mainline == 'true' }}
+          type=raw,value=stable,enable=${{ steps.versions.outputs.is_stable == 'true' }}
           type=raw,value=${{ steps.versions.outputs.nginx_version }}
           type=raw,value=${{ steps.versions.outputs.nginx_version }}-${{ steps.versions.outputs.modsec_version_clean }}
           type=ref,event=tag
