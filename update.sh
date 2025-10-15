@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 设置版本
-NGINX_VERSION=${1:-"1.26.3"}
+NGINX_VERSION=${1:-"1.29.2"}
 MODSECURITY_VERSION=${2:-"v3.0.14"}
 MODSECURITY_NGINX_VERSION=${3:-"v1.0.4"}
 AUTO_PUSH=${4:-"false"}  # 新增参数，控制是否自动提交和推送
@@ -79,7 +79,7 @@ echo "cd $VERSION_DIR && docker build -t modsecurity:$NGINX_VERSION-$MOD_VERSION
 # 如果设置了自动提交和推送
 if [ "$AUTO_PUSH" = "true" ]; then
     echo "正在提交更改..."
-    git add "$VERSION_DIR" Dockerfile.latest versions.env latest_version
+    git add "$VERSION_DIR" Dockerfile.latest versions.env mainline_version stable_version
     git commit -m "更新 Nginx 至 $NGINX_VERSION, ModSecurity 至 $MODSECURITY_VERSION"
     
     echo "正在推送到远程仓库..."

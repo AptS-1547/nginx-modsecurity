@@ -6,9 +6,6 @@ on:
     paths:
       - 'Dockerfile.latest'
       - 'versions.env'
-      - '.github/workflows/docker-image.yml'
-      - 'update.sh'
-      - 'Dockerfile.template'
       - 'stable_version'
       - 'mainline_version'
     tags:

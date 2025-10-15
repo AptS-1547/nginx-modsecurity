@@ -1,82 +1,84 @@
 # Nginx with ModSecurity
 
+English | [简体中文](README.zh-CN.md)
+
 ![Docker Image CI](https://github.com/AptS-1547/nginx-modsecurity/workflows/Docker%20Image%20CI/badge.svg)
 [![Docker Hub](https://img.shields.io/docker/pulls/e1saps/nginx-modsecurity.svg)](https://hub.docker.com/r/e1saps/nginx-modsecurity)
 [![GitHub Container Registry](https://img.shields.io/badge/GitHub%20Container-Registry-blue)](https://github.com/e1saps/nginx-modsecurity/pkgs/container/nginx-modsecurity)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-一个轻量级、安全且高性能的 Nginx + ModSecurity WAF Docker 镜像，专为现代 Web 应用提供企业级防护能力。
+A lightweight, secure and high-performance Nginx + ModSecurity WAF Docker image, providing enterprise-grade protection for modern web applications.
 
-## 核心组件
+## Core Components
 
-本项目基于以下开源项目构建：
+This project is built on the following open source projects:
 
-- **[Nginx](https://github.com/nginx/nginx)** - 高性能 Web 服务器和反向代理
-- **[ModSecurity](https://github.com/owasp-modsecurity/ModSecurity)** - OWASP Web 应用防火墙引擎
-- **[ModSecurity-nginx](https://github.com/owasp-modsecurity/ModSecurity-nginx)** - ModSecurity 的 Nginx 连接器模块
+- **[Nginx](https://github.com/nginx/nginx)** - High-performance web server and reverse proxy
+- **[ModSecurity](https://github.com/owasp-modsecurity/ModSecurity)** - OWASP Web Application Firewall engine
+- **[ModSecurity-nginx](https://github.com/owasp-modsecurity/ModSecurity-nginx)** - ModSecurity connector module for Nginx
 
-## 目录
+## Table of Contents
 
-- [项目简介](#项目简介)
-- [功能特点](#功能特点)
-- [快速开始](#快速开始)
-- [镜像标签](#镜像标签)
-- [支持的版本](#支持的版本)
-- [使用指南](#使用指南)
-- [版本管理](#版本管理)
-- [自定义构建](#自定义构建)
-- [开发指南](#开发指南)
-- [贡献](#贡献)
-- [许可证](#许可证)
+- [Introduction](#introduction)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Image Tags](#image-tags)
+- [Supported Versions](#supported-versions)
+- [Usage Guide](#usage-guide)
+- [Version Management](#version-management)
+- [Custom Build](#custom-build)
+- [Development Guide](#development-guide)
+- [Contributing](#contributing)
+- [License](#license)
 
-## 项目简介
+## Introduction
 
-本项目提供了一个开箱即用的 Nginx + ModSecurity Web 应用防火墙（WAF）解决方案，专门设计用于保护 Web 应用免受常见攻击，如 SQL 注入、XSS、CSRF 等。
+This project provides a ready-to-use Nginx + ModSecurity Web Application Firewall (WAF) solution, designed to protect web applications from common attacks such as SQL injection, XSS, CSRF, and more.
 
-### 为什么选择这个镜像？
+### Why Choose This Image?
 
-- **轻量级**: 基于 Alpine Linux，镜像大小仅约 60MB
-- **安全优先**: 集成 OWASP ModSecurity v3 引擎，提供企业级 WAF 防护能力
-- **多阶段构建**: 使用 Docker 多阶段构建技术，减少攻击面
-- **持续更新**: 自动化 CI/CD 流程，及时跟进安全补丁
-- **生产就绪**: 经过优化的配置和运行时依赖，适合直接部署
+- **Lightweight**: Based on Alpine Linux, image size is only ~60MB
+- **Security First**: Integrated with OWASP ModSecurity v3 engine for enterprise-grade WAF protection
+- **Multi-stage Build**: Uses Docker multi-stage build to reduce attack surface
+- **Continuous Updates**: Automated CI/CD pipeline ensures timely security patches
+- **Production Ready**: Optimized configuration and runtime dependencies suitable for production deployment
 
-### 适用场景
+### Use Cases
 
-- 保护 Web 应用和 API 免受 OWASP Top 10 威胁
-- 作为反向代理前置 WAF，为后端服务提供统一安全防护
-- 微服务架构中的边缘安全网关
-- 容器化环境中的应用层防火墙
+- Protect web applications and APIs from OWASP Top 10 threats
+- Deploy as a reverse proxy WAF to provide unified security protection for backend services
+- Edge security gateway in microservices architecture
+- Application-layer firewall in containerized environments
 
-## 功能特点
+## Features
 
-### 核心特性
+### Core Features
 
-- ✅ **最新版本支持**: Nginx 1.28.0 + ModSecurity v3.0.14
-- ✅ **Alpine Linux 基础**: 极致轻量，安全加固
-- ✅ **动态模块加载**: ModSecurity 作为动态模块编译
-- ✅ **完整的运行时依赖**: 包含 Lua 5.4、LMDB、YAJL、GeoIP 等
-- ✅ **多架构支持**: 原生支持 AMD64 (x86_64) 和 ARM64 (aarch64)
+- ✅ **Latest Version Support**: Nginx 1.28.0 + ModSecurity v3.0.14
+- ✅ **Alpine Linux Based**: Extremely lightweight with security hardening
+- ✅ **Dynamic Module Loading**: ModSecurity compiled as a dynamic module
+- ✅ **Complete Runtime Dependencies**: Includes Lua 5.4, LMDB, YAJL, GeoIP, etc.
+- ✅ **Multi-Architecture Support**: Native support for AMD64 (x86_64) and ARM64 (aarch64)
 
-## 快速开始
+## Quick Start
 
-### 拉取镜像
+### Pull Image
 
-从 Docker Hub 拉取：
+From Docker Hub:
 
 ```bash
 docker pull e1saps/nginx-modsecurity:latest
 ```
 
-或从 GitHub Container Registry 拉取：
+Or from GitHub Container Registry:
 
 ```bash
 docker pull ghcr.io/e1saps/nginx-modsecurity:latest
 ```
 
-### 基本运行
+### Basic Run
 
-启动一个简单的 Nginx + ModSecurity 容器：
+Start a simple Nginx + ModSecurity container:
 
 ```bash
 docker run -d \
@@ -86,7 +88,7 @@ docker run -d \
   e1saps/nginx-modsecurity:latest
 ```
 
-验证运行状态：
+Verify container status:
 
 ```bash
 docker ps
@@ -94,43 +96,43 @@ docker logs nginx-modsec
 curl http://localhost
 ```
 
-## 镜像标签
+## Image Tags
 
-| 标签格式 | 示例 | 说明 |
-|---------|------|------|
-| `latest` | `latest` | 最新主线版本（Mainline），包含最新功能 |
-| `mainline` | `mainline` | 最新主线版本（Mainline），与 `latest` 相同 |
-| `stable` | `stable` | 最新稳定版本（Stable），专注于 bug 修复 |
-| `<nginx-version>` | `1.28.0` | 特定 Nginx 版本 |
-| `<nginx-version>-<modsec-version>` | `1.28.0-3.0.14` | 特定版本组合（推荐生产使用） |
+| Tag Format | Example | Description |
+|-----------|---------|-------------|
+| `latest` | `latest` | Latest mainline version with newest features |
+| `mainline` | `mainline` | Latest mainline version, same as `latest` |
+| `stable` | `stable` | Latest stable version, focused on bug fixes |
+| `<nginx-version>` | `1.28.0` | Specific Nginx version |
+| `<nginx-version>-<modsec-version>` | `1.28.0-3.0.14` | Specific version combination (recommended for production) |
 
-**生产环境建议**: 使用具体版本标签（如 `1.28.0-3.0.14`）以确保环境一致性。如需跟踪最新版本，建议使用 `stable` 标签而非 `latest`/`mainline`。
+**Production Recommendation**: Use specific version tags (e.g., `1.28.0-3.0.14`) to ensure environment consistency. If tracking latest versions, prefer `stable` tag over `latest`/`mainline`.
 
-## 支持的版本
+## Supported Versions
 
-本项目维护以下 Nginx 版本的镜像：
+This project maintains images for the following Nginx versions:
 
-| Nginx 版本 | ModSecurity 版本 | 状态 |
-|-----------|-----------------|------|
-| 1.28.0 | v3.0.14 | ✅ 最新 |
-| 1.26.3 | v3.0.14 | ✅ 稳定 |
-| 1.24.0 | v3.0.14 | ✅ 长期支持 |
-| 1.22.1 | v3.0.14 | ⚠️ 维护中 |
-| 1.20.2 | v3.0.14 | ⚠️ 维护中 |
-| 1.18.0 | v3.0.14 | ⚠️ 旧版本 |
-| 1.16.1 | v3.0.14 | ⚠️ 旧版本 |
-| 1.14.2 | v3.0.14 | ⚠️ 旧版本 |
+| Nginx Version | ModSecurity Version | Status |
+|--------------|-------------------|--------|
+| 1.28.0 | v3.0.14 | ✅ Latest |
+| 1.26.3 | v3.0.14 | ✅ Stable |
+| 1.24.0 | v3.0.14 | ✅ LTS |
+| 1.22.1 | v3.0.14 | ⚠️ Maintained |
+| 1.20.2 | v3.0.14 | ⚠️ Maintained |
+| 1.18.0 | v3.0.14 | ⚠️ Legacy |
+| 1.16.1 | v3.0.14 | ⚠️ Legacy |
+| 1.14.2 | v3.0.14 | ⚠️ Legacy |
 
-**更新策略**:
+**Update Strategy**:
 
-- 从 2025-10-16 起推送 Nginx 主线版本（Mainline），之前版本保持为稳定版（Stable）
-- ModSecurity 版本保持在 v3.x 最新稳定分支
-- 定期进行安全补丁更新
-- 主线版本包含最新功能和改进，稳定版本专注于 bug 修复
+- Starting from 2025-10-16, pushing Nginx mainline versions; previous versions remain stable
+- ModSecurity version stays on v3.x latest stable branch
+- Regular security patch updates
+- Mainline versions include latest features and improvements, stable versions focus on bug fixes
 
-## 使用指南
+## Usage Guide
 
-### 使用自定义配置
+### Using Custom Configuration
 
 ```bash
 docker run -d \
@@ -143,9 +145,9 @@ docker run -d \
   e1saps/nginx-modsecurity:latest
 ```
 
-### 使用 Docker Compose
+### Using Docker Compose
 
-创建 `docker-compose.yml` 文件：
+Create a `docker-compose.yml` file:
 
 ```yaml
 version: '3.8'
@@ -176,22 +178,37 @@ networks:
     driver: bridge
 ```
 
-启动服务：
+Start services:
 
 ```bash
 docker-compose up -d
 ```
 
-### 配置 ModSecurity
+### Configuring ModSecurity
 
-在 Nginx 配置中启用 ModSecurity：
+#### Module Loading Method
+
+**Important Notice**: Starting from version 1.29.2, the ModSecurity module loading method has changed.
+
+- **Version 1.29.2 and earlier**: Module is automatically loaded into `/etc/nginx/nginx.conf`, no additional configuration needed
+- **After version 1.29.2**: Module configuration file is located at `/etc/nginx/modules-available/50-modsecurity.conf`
+
+For newer versions (after 1.29.2), add this to the top of your `nginx.conf`:
+
+```nginx
+include /etc/nginx/modules-enabled/*.conf;
+```
+
+#### Enabling ModSecurity
+
+Enable ModSecurity in your Nginx configuration:
 
 ```nginx
 server {
     listen 80;
     server_name example.com;
 
-    # 启用 ModSecurity
+    # Enable ModSecurity
     modsecurity on;
     modsecurity_rules_file /etc/nginx/modsec/modsecurity.conf;
 
@@ -202,88 +219,65 @@ server {
 }
 ```
 
-关于 ModSecurity 详细配置和 OWASP CRS 规则集成，请参考：
+For detailed ModSecurity configuration and OWASP CRS integration, please refer to:
 
-- [ModSecurity 官方文档](https://github.com/SpiderLabs/ModSecurity/wiki)
-- [OWASP CRS 项目](https://coreruleset.org/)
+- [ModSecurity Official Documentation](https://github.com/SpiderLabs/ModSecurity/wiki)
+- [OWASP CRS Project](https://coreruleset.org/)
 
-### 反向代理示例
+## Version Management
 
-```nginx
-upstream backend {
-    server backend1:8080;
-    server backend2:8080;
-}
+This project uses the `update.sh` script to manage builds for different versions.
 
-server {
-    listen 80;
-
-    modsecurity on;
-    modsecurity_rules_file /etc/nginx/modsec/modsecurity.conf;
-
-    location / {
-        proxy_pass http://backend;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
-
-## 版本管理
-
-本项目使用 `update.sh` 脚本来管理不同版本的构建。
-
-### 更新到新版本
+### Update to New Version
 
 ```bash
-# 基本用法
+# Basic usage
 ./update.sh <NGINX_VERSION> <MODSECURITY_VERSION> <MODSECURITY_NGINX_VERSION>
 
-# 示例
+# Example
 ./update.sh 1.28.0 v3.0.14 v1.0.4
 
-# 自动提交并推送（可选）
+# Auto commit and push (optional)
 ./update.sh 1.28.0 v3.0.14 v1.0.4 true
 ```
 
-### 脚本功能
+### Script Functions
 
-运行脚本后会：
+After running the script:
 
-1. 创建版本化目录：`nginx-<version>/mod-<version>/`
-2. 生成该版本的 Dockerfile 和 README
-3. 更新根目录的 `Dockerfile.latest`
-4. 更新 `versions.env` 版本信息文件
+1. Creates versioned directory: `nginx-<version>/mod-<version>/`
+2. Generates Dockerfile and README for that version
+3. Updates `Dockerfile.latest` in root directory
+4. Updates `versions.env` version information file
 
-### 查看当前版本
+### View Current Version
 
 ```bash
 cat versions.env
 ```
 
-## 自定义构建
+## Custom Build
 
-### 构建特定版本
+### Build Specific Version
 
 ```bash
 cd nginx-1.28.0/mod-3.0.14
 docker build -t my-nginx-modsec:1.28.0-3.0.14 .
 ```
 
-### 构建最新版本
+### Build Latest Version
 
 ```bash
 docker build -t my-nginx-modsec:latest -f Dockerfile.latest .
 ```
 
-### 多架构构建
+### Multi-Architecture Build
 
 ```bash
-# 创建 builder
+# Create builder
 docker buildx create --name multiarch --use
 
-# 构建并推送
+# Build and push
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   -t my-registry/nginx-modsecurity:latest \
@@ -291,9 +285,9 @@ docker buildx build \
   --push .
 ```
 
-## 开发指南
+## Development Guide
 
-### 环境准备
+### Environment Setup
 
 ```bash
 git clone https://github.com/AptS-1547/nginx-modsecurity.git
@@ -301,7 +295,7 @@ cd nginx-modsecurity
 docker build -t nginx-modsecurity:dev -f Dockerfile.latest .
 ```
 
-### 添加新版本
+### Add New Version
 
 ```bash
 ./update.sh 1.29.0 v3.0.14 v1.0.4
@@ -309,61 +303,61 @@ cd nginx-1.29.0/mod-3.0.14
 docker build -t test:1.29.0-3.0.14 .
 ```
 
-### 测试
+### Testing
 
 ```bash
-# 测试镜像构建
+# Test image build
 docker build -t test:latest -f Dockerfile.latest .
 
-# 测试运行
+# Test run
 docker run -d --name test-waf -p 8080:80 test:latest
 curl http://localhost:8080/
 docker rm -f test-waf
 ```
 
-### CI/CD 流程
+### CI/CD Workflow
 
-本项目使用 GitHub Actions 进行自动化构建和发布：
+This project uses GitHub Actions for automated building and publishing:
 
-- **触发条件**: Push 到 master 分支或创建 Tag
-- **构建矩阵**: 多架构构建（AMD64, ARM64）
-- **发布目标**: Docker Hub 和 GitHub Container Registry
+- **Trigger Conditions**: Push to master branch or create Tag
+- **Build Targets**: Docker Hub and GitHub Container Registry
+- **Build Matrix (Future)**: Multi-architecture builds (AMD64, ARM64)
 
-### 贡献代码
+### Contributing Code
 
-1. Fork 本仓库
-2. 创建特性分支：`git checkout -b feature/amazing-feature`
-3. 提交更改：`git commit -m 'Add some amazing feature'`
-4. 推送分支：`git push origin feature/amazing-feature`
-5. 提交 Pull Request
+1. Fork this repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add some amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Submit a Pull Request
 
-## 贡献
+## Contributing
 
-欢迎通过以下方式为项目做出贡献：
+Contributions are welcome in the following ways:
 
-- 🐛 报告 Bug: 在 [Issues](https://github.com/AptS-1547/nginx-modsecurity/issues) 中提交
-- 💡 功能建议: 在 [Issues](https://github.com/AptS-1547/nginx-modsecurity/issues) 中讨论
-- 📖 改进文档: 提交 Pull Request
-- 🔧 代码贡献: 提交 Pull Request
+- 🐛 Report Bugs: Submit in [Issues](https://github.com/AptS-1547/nginx-modsecurity/issues)
+- 💡 Feature Suggestions: Discuss in [Issues](https://github.com/AptS-1547/nginx-modsecurity/issues)
+- 📖 Improve Documentation: Submit Pull Request
+- 🔧 Code Contributions: Submit Pull Request
 
-## 许可证
+## License
 
-本项目采用 [MIT License](LICENSE) 许可证。
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
-## 相关资源
+## Related Resources
 
-- [Nginx 官方文档](https://nginx.org/en/docs/)
-- [ModSecurity 官方文档](https://github.com/SpiderLabs/ModSecurity)
-- [OWASP CRS 项目](https://coreruleset.org/)
-- [Docker 官方文档](https://docs.docker.com/)
+- [Nginx Official Documentation](https://nginx.org/en/docs/)
+- [ModSecurity Official Documentation](https://github.com/SpiderLabs/ModSecurity)
+- [OWASP CRS Project](https://coreruleset.org/)
+- [Docker Official Documentation](https://docs.docker.com/)
 
-## 问题反馈
+## Feedback
 
-如有任何问题或建议，欢迎通过以下方式联系：
+For any questions or suggestions, please contact us via:
 
 - GitHub Issues: <https://github.com/AptS-1547/nginx-modsecurity/issues>
 - Email: <apts-1547@esaps.net>
 
-如果这个项目对你有帮助，请给一个 ⭐️ Star 支持！
+If this project helps you, please give it a ⭐️ Star!
