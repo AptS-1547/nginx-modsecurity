@@ -115,10 +115,11 @@ This project maintains images for the following Nginx versions:
 | Nginx Version | ModSecurity Version | Status |
 |--------------|-------------------|--------|
 | 1.29.3 | v3.0.14 | ✅ Latest |
-| 1.26.3 | v3.0.14 | ✅ Stable |
-| 1.24.0 | v3.0.14 | ✅ LTS |
+| 1.28.0 | v3.0.14 | ✅ Stable |
+| 1.26.3 | v3.0.14 | ✅ LTS |
+| 1.24.0 | v3.0.14 | ⚠️ Maintained |
 | 1.22.1 | v3.0.14 | ⚠️ Maintained |
-| 1.20.2 | v3.0.14 | ⚠️ Maintained |
+| 1.20.2 | v3.0.14 | ⚠️ Legacy |
 | 1.18.0 | v3.0.14 | ⚠️ Legacy |
 | 1.16.1 | v3.0.14 | ⚠️ Legacy |
 | 1.14.2 | v3.0.14 | ⚠️ Legacy |
