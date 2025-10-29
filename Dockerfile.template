@@ -77,7 +77,8 @@ RUN apk add --no-cache --virtual .runtime-deps \
         curl
 
 # 复制配置文件和模块
-RUN echo "load_module modules/ngx_http_modsecurity_module.so;" > /etc/nginx/modules-available/50-modsecurity.conf \
+RUN mkdir -p /etc/nginx/modules-available \
+    && echo "load_module modules/ngx_http_modsecurity_module.so;" > /etc/nginx/modules-available/50-modsecurity.conf \
     && mkdir -p /etc/nginx/modules-enabled \
     && ln -s /etc/nginx/modules-available/50-modsecurity.conf /etc/nginx/modules-enabled/
 COPY --from=builder /usr/local/modsecurity/ /usr/local/modsecurity/

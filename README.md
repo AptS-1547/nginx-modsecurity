@@ -54,7 +54,7 @@ This project provides a ready-to-use Nginx + ModSecurity Web Application Firewal
 
 ### Core Features
 
-- ✅ **Latest Version Support**: Nginx 1.28.0 + ModSecurity v3.0.14
+- ✅ **Latest Version Support**: Nginx 1.29.3 + ModSecurity v3.0.14
 - ✅ **Alpine Linux Based**: Extremely lightweight with security hardening
 - ✅ **Dynamic Module Loading**: ModSecurity compiled as a dynamic module
 - ✅ **Complete Runtime Dependencies**: Includes Lua 5.4, LMDB, YAJL, GeoIP, etc.
@@ -103,10 +103,10 @@ curl http://localhost
 | `latest` | `latest` | Latest mainline version with newest features |
 | `mainline` | `mainline` | Latest mainline version, same as `latest` |
 | `stable` | `stable` | Latest stable version, focused on bug fixes |
-| `<nginx-version>` | `1.28.0` | Specific Nginx version |
-| `<nginx-version>-<modsec-version>` | `1.28.0-3.0.14` | Specific version combination (recommended for production) |
+| `<nginx-version>` | `1.29.3` | Specific Nginx version |
+| `<nginx-version>-<modsec-version>` | `1.29.3-3.0.14` | Specific version combination (recommended for production) |
 
-**Production Recommendation**: Use specific version tags (e.g., `1.28.0-3.0.14`) to ensure environment consistency. If tracking latest versions, prefer `stable` tag over `latest`/`mainline`.
+**Production Recommendation**: Use specific version tags (e.g., `1.29.3-3.0.14`) to ensure environment consistency. If tracking latest versions, prefer `stable` tag over `latest`/`mainline`.
 
 ## Supported Versions
 
@@ -114,7 +114,7 @@ This project maintains images for the following Nginx versions:
 
 | Nginx Version | ModSecurity Version | Status |
 |--------------|-------------------|--------|
-| 1.28.0 | v3.0.14 | ✅ Latest |
+| 1.29.3 | v3.0.14 | ✅ Latest |
 | 1.26.3 | v3.0.14 | ✅ Stable |
 | 1.24.0 | v3.0.14 | ✅ LTS |
 | 1.22.1 | v3.0.14 | ⚠️ Maintained |
@@ -235,10 +235,10 @@ This project uses the `update.sh` script to manage builds for different versions
 ./update.sh <NGINX_VERSION> <MODSECURITY_VERSION> <MODSECURITY_NGINX_VERSION>
 
 # Example
-./update.sh 1.28.0 v3.0.14 v1.0.4
+./update.sh 1.29.3 v3.0.14 v1.0.4
 
 # Auto commit and push (optional)
-./update.sh 1.28.0 v3.0.14 v1.0.4 true
+./update.sh 1.29.3 v3.0.14 v1.0.4 true
 ```
 
 ### Script Functions
@@ -261,8 +261,8 @@ cat versions.env
 ### Build Specific Version
 
 ```bash
-cd nginx-1.28.0/mod-3.0.14
-docker build -t my-nginx-modsec:1.28.0-3.0.14 .
+cd nginx-1.29.3/mod-3.0.14
+docker build -t my-nginx-modsec:1.29.3-3.0.14 .
 ```
 
 ### Build Latest Version
