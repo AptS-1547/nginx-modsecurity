@@ -54,7 +54,7 @@
 
 ### 核心特性
 
-- ✅ **最新版本支持**: Nginx 1.29.3 + ModSecurity v3.0.14
+- ✅ **最新版本支持**: Nginx 1.29.4 + ModSecurity v3.0.14
 - ✅ **Alpine Linux 基础**: 极致轻量，安全加固
 - ✅ **动态模块加载**: ModSecurity 作为动态模块编译
 - ✅ **完整的运行时依赖**: 包含 Lua 5.4、LMDB、YAJL、GeoIP 等
@@ -103,10 +103,10 @@ curl http://localhost
 | `latest` | `latest` | 最新主线版本（Mainline），包含最新功能 |
 | `mainline` | `mainline` | 最新主线版本（Mainline），与 `latest` 相同 |
 | `stable` | `stable` | 最新稳定版本（Stable），专注于 bug 修复 |
-| `<nginx-version>` | `1.29.3` | 特定 Nginx 版本 |
-| `<nginx-version>-<modsec-version>` | `1.29.3-3.0.14` | 特定版本组合（推荐生产使用） |
+| `<nginx-version>` | `1.29.4` | 特定 Nginx 版本 |
+| `<nginx-version>-<modsec-version>` | `1.29.4-3.0.14` | 特定版本组合（推荐生产使用） |
 
-**生产环境建议**: 使用具体版本标签（如 `1.29.3-3.0.14`）以确保环境一致性。如需跟踪最新版本，建议使用 `stable` 标签而非 `latest`/`mainline`。
+**生产环境建议**: 使用具体版本标签（如 `1.29.4-3.0.14`）以确保环境一致性。如需跟踪最新版本，建议使用 `stable` 标签而非 `latest`/`mainline`。
 
 ## 支持的版本
 
@@ -114,7 +114,7 @@ curl http://localhost
 
 | Nginx 版本 | ModSecurity 版本 | 状态 |
 |-----------|-----------------|------|
-| 1.29.3 | v3.0.14 | ✅ 最新 |
+| 1.29.4 | v3.0.14 | ✅ 最新 |
 | 1.28.0 | v3.0.14 | ✅ 稳定 |
 | 1.26.3 | v3.0.14 | ✅ 长期支持 |
 | 1.24.0 | v3.0.14 | ⚠️ 维护中 |
@@ -236,10 +236,10 @@ server {
 ./update.sh <NGINX_VERSION> <MODSECURITY_VERSION> <MODSECURITY_NGINX_VERSION>
 
 # 示例
-./update.sh 1.29.3 v3.0.14 v1.0.4
+./update.sh 1.29.4 v3.0.14 v1.0.4
 
 # 自动提交并推送（可选）
-./update.sh 1.29.3 v3.0.14 v1.0.4 true
+./update.sh 1.29.4 v3.0.14 v1.0.4 true
 ```
 
 ### 脚本功能
@@ -262,8 +262,8 @@ cat versions.env
 ### 构建特定版本
 
 ```bash
-cd nginx-1.29.3/mod-3.0.14
-docker build -t my-nginx-modsec:1.29.3-3.0.14 .
+cd nginx-1.29.4/mod-3.0.14
+docker build -t my-nginx-modsec:1.29.4-3.0.14 .
 ```
 
 ### 构建最新版本
