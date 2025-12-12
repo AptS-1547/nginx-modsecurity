@@ -48,6 +48,8 @@ RUN git clone --depth 1 -b ${MODSECURITY_NGINX_VERSION} https://github.com/owasp
 RUN cd /opt/ModSecurity \
     && git submodule init \
     && git submodule update \
+    && sed -i '/#include <memory>/a #include <cstdint>' \
+       headers/modsecurity/collection/collection.h \
     && ./build.sh \
     && ./configure --prefix=/usr/local/modsecurity --with-lmdb --with-pcre2 \
     && make \
@@ -90,4 +92,4 @@ LABEL maintainer="AptS-1547 <apts-1547@esaps.net>" \
       nginx_version="1.29.4" \
       modsecurity_version="v3.0.14" \
       modsecurity_nginx_version="v1.0.4" \
-      build_date="2025-12-12T03:35:33Z"
+      build_date="2025-12-12T21:20:35Z"
