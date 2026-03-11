@@ -2,120 +2,127 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
     paths:
-      - 'Dockerfile.latest'
-      - 'versions.env'
-      - 'stable_version'
-      - 'mainline_version'
-    tags:
-      - 'v*'
-  workflow_dispatch:  # 添加手动触发选项
+      - "build-matrix.json"
+      - "nginx-*/mod-*/Dockerfile"
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: "强制重建所有镜像（忽略已存在的 tag）"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
   packages: write
 
 jobs:
-  build-and-push:
+  prepare:
     runs-on: ubuntu-latest
-
-    if: github.event_name == 'push' && github.ref_type == 'branch' || github.event_name == 'workflow_dispatch'
-    
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Set version variables
-      id: versions
-      run: |
-        # 从 versions.env 文件中提取版本信息
-        if [ -f "versions.env" ]; then
-          source versions.env
-          echo "nginx_version=${NGINX_VERSION}" >> $GITHUB_OUTPUT
-          echo "modsec_version=${MODSECURITY_VERSION}" >> $GITHUB_OUTPUT
-          echo "modsec_version_clean=${MODSECURITY_VERSION#v}" >> $GITHUB_OUTPUT
-          echo "modsec_nginx_version=${MODSECURITY_NGINX_VERSION}" >> $GITHUB_OUTPUT
-          echo "build_date=${BUILD_DATE}" >> $GITHUB_OUTPUT
-          
-          echo "使用 versions.env 中的版本信息:"
-          echo "Nginx: ${NGINX_VERSION}"
-          echo "ModSecurity: ${MODSECURITY_VERSION}"
-          echo "ModSecurity-nginx: ${MODSECURITY_NGINX_VERSION}"
-        else
-          echo "versions.env 文件不存在，请确保它在仓库中并包含正确的版本信息。"
-          exit 1
-        fi
+      - name: Generate build matrix
+        id: set-matrix
+        run: |
+          MATRIX=$(jq -c '{include: .builds}' build-matrix.json)
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+          echo "构建矩阵: ${MATRIX}"
 
-        # 检查是否为最新主线版本
-        if [ -f "mainline_version" ]; then
-          MAINLINE_VERSION=$(cat mainline_version)
-          if [ "${NGINX_VERSION}" == "${MAINLINE_VERSION}" ]; then
-            echo "is_mainline=true" >> $GITHUB_OUTPUT
-            echo "当前版本 ${NGINX_VERSION} 是最新主线版本，将使用 latest 标签"
+  build-and-push:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set version variables
+        id: vars
+        run: |
+          MODSEC_CLEAN="${{ matrix.modsecurity }}"
+          MODSEC_CLEAN="${MODSEC_CLEAN#v}"
+          echo "version_tag=${{ matrix.nginx }}-${MODSEC_CLEAN}" >> $GITHUB_OUTPUT
+          echo "modsec_clean=${MODSEC_CLEAN}" >> $GITHUB_OUTPUT
+
+      - name: Check if image already exists
+        id: check
+        if: ${{ github.event.inputs.force_rebuild != 'true' }}
+        run: |
+          TAG="${{ steps.vars.outputs.version_tag }}"
+          if docker manifest inspect "e1saps/nginx-modsecurity:${TAG}" > /dev/null 2>&1; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "镜像 e1saps/nginx-modsecurity:${TAG} 已存在，跳过构建"
           else
-            echo "is_mainline=false" >> $GITHUB_OUTPUT
-            echo "当前版本 ${NGINX_VERSION} 不是最新主线版本 ${MAINLINE_VERSION}，不会使用 latest 标签"
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "镜像 e1saps/nginx-modsecurity:${TAG} 不存在，开始构建"
           fi
-        else
-          echo "mainline_version 文件不存在，默认当前版本不是最新主线版本"
-          echo "is_mainline=false" >> $GITHUB_OUTPUT
-        fi
 
-        # 检查是否为最新稳定版本
-        if [ -f "stable_version" ]; then
-          STABLE_VERSION=$(cat stable_version)
-          if [ "${NGINX_VERSION}" == "${STABLE_VERSION}" ]; then
-            echo "is_stable=true" >> $GITHUB_OUTPUT
-            echo "当前版本 ${NGINX_VERSION} 是最新稳定版本，将使用 stable 标签"
-          else
-            echo "is_stable=false" >> $GITHUB_OUTPUT
-            echo "当前版本 ${NGINX_VERSION} 不是最新稳定版本 ${STABLE_VERSION}，不会使用 stable 标签"
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate tags
+        if: steps.check.outputs.skip != 'true'
+        id: tags
+        run: |
+          TAGS=""
+          VERSION_TAG="${{ steps.vars.outputs.version_tag }}"
+          NGINX="${{ matrix.nginx }}"
+          ROLE="${{ matrix.role }}"
+
+          # 版本 tag（始终添加）
+          TAGS="e1saps/nginx-modsecurity:${NGINX}"
+          TAGS="${TAGS},e1saps/nginx-modsecurity:${VERSION_TAG}"
+          TAGS="${TAGS},ghcr.io/${{ github.repository }}:${NGINX}"
+          TAGS="${TAGS},ghcr.io/${{ github.repository }}:${VERSION_TAG}"
+
+          # 角色 tag
+          if [ "${ROLE}" = "mainline" ]; then
+            TAGS="${TAGS},e1saps/nginx-modsecurity:latest"
+            TAGS="${TAGS},e1saps/nginx-modsecurity:mainline"
+            TAGS="${TAGS},ghcr.io/${{ github.repository }}:latest"
+            TAGS="${TAGS},ghcr.io/${{ github.repository }}:mainline"
+          elif [ "${ROLE}" = "stable" ]; then
+            TAGS="${TAGS},e1saps/nginx-modsecurity:stable"
+            TAGS="${TAGS},ghcr.io/${{ github.repository }}:stable"
           fi
-        else
-          echo "stable_version 文件不存在，默认当前版本不是最新稳定版本"
-          echo "is_stable=false" >> $GITHUB_OUTPUT
-        fi
 
-    - name: Extract metadata for Docker
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: |
-          e1saps/nginx-modsecurity
-          ghcr.io/${{ github.repository }}
-        tags: |
-          type=raw,value=latest,enable=${{ steps.versions.outputs.is_mainline == 'true' }}
-          type=raw,value=mainline,enable=${{ steps.versions.outputs.is_mainline == 'true' }}
-          type=raw,value=stable,enable=${{ steps.versions.outputs.is_stable == 'true' }}
-          type=raw,value=${{ steps.versions.outputs.nginx_version }}
-          type=raw,value=${{ steps.versions.outputs.nginx_version }}-${{ steps.versions.outputs.modsec_version_clean }}
-          type=ref,event=tag
-          type=sha,format=short
-        
-    - name: Build and push
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile.latest
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        build-args: |
-          VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "生成的 tags: ${TAGS}"
+
+      - name: Build and push
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            org.opencontainers.image.title=nginx-modsecurity
+            org.opencontainers.image.description=Nginx ${{ matrix.nginx }} with ModSecurity ${{ matrix.modsecurity }}
+            org.opencontainers.image.version=${{ steps.vars.outputs.version_tag }}

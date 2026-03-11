@@ -1,93 +1,85 @@
 #!/bin/bash
+set -euo pipefail
 
-# 设置版本
-NGINX_VERSION=${1:-"1.29.2"}
-MODSECURITY_VERSION=${2:-"v3.0.14"}
-MODSECURITY_NGINX_VERSION=${3:-"v1.0.4"}
-AUTO_PUSH=${4:-"false"}  # 新增参数，控制是否自动提交和推送
+# 用法: ./update.sh <NGINX_VERSION> <MODSECURITY_VERSION> <MODSECURITY_NGINX_VERSION> [ROLE]
+# 示例: ./update.sh 1.29.7 v3.0.14 v1.0.4 mainline
 
-# 移除版本号中的 'v' 前缀，便于文件夹命名
-MOD_VERSION=${MODSECURITY_VERSION#v}
+NGINX_VERSION="${1:?用法: ./update.sh <NGINX_VERSION> <MODSECURITY_VERSION> <MODSECURITY_NGINX_VERSION> [ROLE]}"
+MODSECURITY_VERSION="${2:?缺少 MODSECURITY_VERSION 参数}"
+MODSECURITY_NGINX_VERSION="${3:?缺少 MODSECURITY_NGINX_VERSION 参数}"
+ROLE="${4:-mainline}"
 
-# 创建版本化目录
+MOD_VERSION="${MODSECURITY_VERSION#v}"
 VERSION_DIR="nginx-${NGINX_VERSION}/mod-${MOD_VERSION}"
-mkdir -p "$VERSION_DIR"
-
-# 当前日期
 BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# 显示版本信息
-echo "更新到以下版本:"
-echo "Nginx: $NGINX_VERSION"
-echo "ModSecurity: $MODSECURITY_VERSION"
-echo "ModSecurity-nginx: $MODSECURITY_NGINX_VERSION"
-echo "导出目录: $VERSION_DIR"
-echo "自动提交并推送: $AUTO_PUSH"
+echo "=== 创建新版本 ==="
+echo "Nginx:              ${NGINX_VERSION}"
+echo "ModSecurity:        ${MODSECURITY_VERSION}"
+echo "ModSecurity-nginx:  ${MODSECURITY_NGINX_VERSION}"
+echo "角色:               ${ROLE}"
+echo "目录:               ${VERSION_DIR}"
 echo
 
-# 生成版本化目录的 Dockerfile
-cat Dockerfile.template | \
-  sed "s/{{NGINX_VERSION}}/$NGINX_VERSION/g" | \
-  sed "s/{{MODSECURITY_VERSION}}/$MODSECURITY_VERSION/g" | \
-  sed "s/{{MODSECURITY_NGINX_VERSION}}/$MODSECURITY_NGINX_VERSION/g" | \
-  sed "s/{{BUILD_DATE}}/$BUILD_DATE/g" > "$VERSION_DIR/Dockerfile"
+# 查找最近的同 modsecurity 版本目录作为模板
+TEMPLATE_DIR=$(ls -d nginx-*/mod-"${MOD_VERSION}" 2>/dev/null | sort -t- -k2 -V | tail -1 || true)
 
-# 同时生成根目录的 Dockerfile.latest 文件
-cat Dockerfile.template | \
-  sed "s/{{NGINX_VERSION}}/$NGINX_VERSION/g" | \
-  sed "s/{{MODSECURITY_VERSION}}/$MODSECURITY_VERSION/g" | \
-  sed "s/{{MODSECURITY_NGINX_VERSION}}/$MODSECURITY_NGINX_VERSION/g" | \
-  sed "s/{{BUILD_DATE}}/$BUILD_DATE/g" > "Dockerfile.latest"
-
-# 创建版本信息文件，记录当前使用的版本
-cat > "versions.env" << EOF
-NGINX_VERSION=$NGINX_VERSION
-MODSECURITY_VERSION=$MODSECURITY_VERSION
-MODSECURITY_NGINX_VERSION=$MODSECURITY_NGINX_VERSION
-BUILD_DATE=$BUILD_DATE
-EOF
-
-# 创建一个README文件，记录版本信息
-cat > "$VERSION_DIR/README.md" << EOF
-# ModSecurity with Nginx
-
-版本信息:
-- Nginx: $NGINX_VERSION
-- ModSecurity: $MODSECURITY_VERSION
-- ModSecurity-nginx: $MODSECURITY_NGINX_VERSION
-
-创建日期: $BUILD_DATE
-
-## 构建镜像
-
-\`\`\`bash
-docker build -t modsecurity:$NGINX_VERSION-$MOD_VERSION .
-\`\`\`
-
-## 运行容器
-
-\`\`\`bash
-docker run -d -p 80:80 modsecurity:$NGINX_VERSION-$MOD_VERSION
-\`\`\`
-EOF
-
-echo "更新完成！文件已导出到 $VERSION_DIR 目录"
-echo "同时已生成 Dockerfile.latest 和 versions.env 文件在根目录"
-echo "您可以运行以下命令构建镜像:"
-echo "cd $VERSION_DIR && docker build -t modsecurity:$NGINX_VERSION-$MOD_VERSION ."
-
-# 如果设置了自动提交和推送
-if [ "$AUTO_PUSH" = "true" ]; then
-    echo "正在提交更改..."
-    git add "$VERSION_DIR" Dockerfile.latest versions.env mainline_version stable_version
-    git commit -m "更新 Nginx 至 $NGINX_VERSION, ModSecurity 至 $MODSECURITY_VERSION"
-    
-    echo "正在推送到远程仓库..."
-    git push
-    
-    if [ $? -eq 0 ]; then
-        echo "提交和推送成功完成！"
-    else
-        echo "推送失败，请手动检查并推送。"
-    fi
+if [ -z "${TEMPLATE_DIR}" ]; then
+    echo "错误: 找不到 mod-${MOD_VERSION} 的已有版本目录作为模板"
+    echo "请手动创建 ${VERSION_DIR}/Dockerfile"
+    exit 1
 fi
+
+echo "使用模板: ${TEMPLATE_DIR}/Dockerfile"
+
+# 从模板目录提取旧的 nginx 版本号
+OLD_NGINX=$(basename "$(dirname "${TEMPLATE_DIR}")" | sed 's/^nginx-//')
+
+# 创建新目录并复制 Dockerfile，替换版本号
+mkdir -p "${VERSION_DIR}"
+sed \
+    -e "s/${OLD_NGINX}/${NGINX_VERSION}/g" \
+    -e "s/MODSECURITY_NGINX_VERSION=.*/MODSECURITY_NGINX_VERSION=${MODSECURITY_NGINX_VERSION}/" \
+    -e "s/build_date=\"[^\"]*\"/build_date=\"${BUILD_DATE}\"/" \
+    "${TEMPLATE_DIR}/Dockerfile" > "${VERSION_DIR}/Dockerfile"
+
+echo "已生成: ${VERSION_DIR}/Dockerfile"
+
+# 更新 build-matrix.json
+if ! command -v jq &> /dev/null; then
+    echo "警告: 未安装 jq，请手动更新 build-matrix.json"
+else
+    DOCKERFILE="${VERSION_DIR}/Dockerfile"
+
+    # 替换同角色的旧条目，或追加新条目
+    NEW_ENTRY=$(jq -n \
+        --arg nginx "${NGINX_VERSION}" \
+        --arg modsec "${MODSECURITY_VERSION}" \
+        --arg modsec_nginx "${MODSECURITY_NGINX_VERSION}" \
+        --arg role "${ROLE}" \
+        --arg dockerfile "${DOCKERFILE}" \
+        '{nginx: $nginx, modsecurity: $modsec, modsecurity_nginx: $modsec_nginx, role: $role, dockerfile: $dockerfile}')
+
+    # 检查是否有同角色的条目
+    HAS_ROLE=$(jq --arg role "${ROLE}" '[.builds[] | select(.role == $role)] | length' build-matrix.json)
+
+    if [ "${HAS_ROLE}" -gt 0 ]; then
+        # 替换同角色的条目
+        jq --argjson entry "${NEW_ENTRY}" --arg role "${ROLE}" \
+            '.builds = [.builds[] | if .role == $role then $entry else . end]' \
+            build-matrix.json > build-matrix.json.tmp
+    else
+        # 追加新条目
+        jq --argjson entry "${NEW_ENTRY}" \
+            '.builds += [$entry]' \
+            build-matrix.json > build-matrix.json.tmp
+    fi
+
+    mv build-matrix.json.tmp build-matrix.json
+    echo "已更新: build-matrix.json"
+fi
+
+echo
+echo "=== 完成 ==="
+echo "请检查 ${VERSION_DIR}/Dockerfile 是否需要调整构建步骤"
+echo "确认无误后 commit 并 push 即可触发 CI 构建"
