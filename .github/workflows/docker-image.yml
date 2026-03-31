@@ -93,22 +93,23 @@ jobs:
           VERSION_TAG="${{ steps.vars.outputs.version_tag }}"
           NGINX="${{ matrix.nginx }}"
           ROLE="${{ matrix.role }}"
+          GHCR_REPO="$(printf '%s' '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
 
           # 版本 tag（始终添加）
           TAGS="e1saps/nginx-modsecurity:${NGINX}"
           TAGS="${TAGS},e1saps/nginx-modsecurity:${VERSION_TAG}"
-          TAGS="${TAGS},ghcr.io/${{ github.repository }}:${NGINX}"
-          TAGS="${TAGS},ghcr.io/${{ github.repository }}:${VERSION_TAG}"
+          TAGS="${TAGS},ghcr.io/${GHCR_REPO}:${NGINX}"
+          TAGS="${TAGS},ghcr.io/${GHCR_REPO}:${VERSION_TAG}"
 
           # 角色 tag
           if [ "${ROLE}" = "mainline" ]; then
             TAGS="${TAGS},e1saps/nginx-modsecurity:latest"
             TAGS="${TAGS},e1saps/nginx-modsecurity:mainline"
-            TAGS="${TAGS},ghcr.io/${{ github.repository }}:latest"
-            TAGS="${TAGS},ghcr.io/${{ github.repository }}:mainline"
+            TAGS="${TAGS},ghcr.io/${GHCR_REPO}:latest"
+            TAGS="${TAGS},ghcr.io/${GHCR_REPO}:mainline"
           elif [ "${ROLE}" = "stable" ]; then
             TAGS="${TAGS},e1saps/nginx-modsecurity:stable"
-            TAGS="${TAGS},ghcr.io/${{ github.repository }}:stable"
+            TAGS="${TAGS},ghcr.io/${GHCR_REPO}:stable"
           fi
 
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
