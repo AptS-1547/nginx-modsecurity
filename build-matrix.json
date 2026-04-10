@@ -1,11 +1,11 @@
 {
   "builds": [
     {
-      "nginx": "1.29.7",
+      "nginx": "1.29.8",
       "modsecurity": "v3.0.14",
       "modsecurity_nginx": "v1.0.4",
       "role": "mainline",
-      "dockerfile": "nginx-1.29.7/mod-3.0.14/Dockerfile"
+      "dockerfile": "nginx-1.29.8/mod-3.0.14/Dockerfile"
     },
     {
       "nginx": "1.28.3",
