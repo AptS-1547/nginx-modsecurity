@@ -46,10 +46,7 @@ RUN git clone --depth 1 -b ${MODSECURITY_NGINX_VERSION} https://github.com/owasp
 
 # 编译 ModSecurity
 RUN cd /opt/ModSecurity \
-    && git submodule init \
-    && git submodule update \
-    && sed -i '/#include <memory>/a #include <cstdint>' \
-       headers/modsecurity/collection/collection.h \
+    && git submodule update --init --recursive \
     && ./build.sh \
     && ./configure --prefix=/usr/local/modsecurity --with-lmdb --with-pcre2 \
     && make \
