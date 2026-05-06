@@ -18,6 +18,9 @@ permissions:
   contents: read
   packages: write
 
+env:
+  REGISTRY_IMAGE_GHCR: ghcr.io/apts-1547/asterdrive
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -65,6 +68,9 @@ jobs:
             echo "skip=false" >> $GITHUB_OUTPUT
             echo "镜像 e1saps/nginx-modsecurity:${TAG} 不存在，开始构建"
           fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.skip != 'true'
@@ -120,6 +126,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ steps.tags.outputs.tags }}
@@ -127,3 +134,9 @@ jobs:
             org.opencontainers.image.title=nginx-modsecurity
             org.opencontainers.image.description=Nginx ${{ matrix.nginx }} with ModSecurity ${{ matrix.modsecurity }}
             org.opencontainers.image.version=${{ steps.vars.outputs.version_tag }}
+          cache-from: |
+            type=gha,scope=docker-image
+            type=registry,ref=${{ env.REGISTRY_IMAGE_GHCR }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=docker-image
+            type=registry,ref=${{ env.REGISTRY_IMAGE_GHCR }}:buildcache,mode=max
