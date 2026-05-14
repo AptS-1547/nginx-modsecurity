@@ -7,358 +7,287 @@ English | [简体中文](README.zh-CN.md)
 [![GitHub Container Registry](https://img.shields.io/badge/GitHub%20Container-Registry-blue)](https://github.com/AptS-1547/nginx-modsecurity/pkgs/container/nginx-modsecurity)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A lightweight, secure and high-performance Nginx + ModSecurity WAF Docker image, providing enterprise-grade protection for modern web applications.
+Production-oriented Docker images for running Nginx with the ModSecurity v3 WAF engine. The image builds ModSecurity and the `modsecurity-nginx` connector from source, compiles the Nginx connector as a dynamic module, and publishes multi-architecture images for `linux/amd64` and `linux/arm64`.
 
-## Core Components
+This repository is intentionally small: each supported version pair lives in its own `nginx-<version>/mod-<version>/Dockerfile`, while `build-matrix.json` controls which images are currently published by CI.
 
-This project is built on the following open source projects:
+## What Is Included
 
-- **[Nginx](https://github.com/nginx/nginx)** - High-performance web server and reverse proxy
-- **[ModSecurity](https://github.com/owasp-modsecurity/ModSecurity)** - OWASP Web Application Firewall engine
-- **[ModSecurity-nginx](https://github.com/owasp-modsecurity/ModSecurity-nginx)** - ModSecurity connector module for Nginx
+- Nginx based on the official `nginx:<version>-alpine` image
+- ModSecurity v3 built from the OWASP ModSecurity source tree
+- `modsecurity-nginx` compiled as an Nginx dynamic module
+- Runtime libraries required by ModSecurity, including Lua 5.4, LMDB, YAJL, PCRE2, GeoIP, libxml2, and curl
+- Module loader file at `/etc/nginx/modules-available/50-modsecurity.conf`
+- Enabled module symlink under `/etc/nginx/modules-enabled/`
+- ModSecurity `unicode.mapping` copied to `/etc/nginx/modsec/`
 
-## Table of Contents
+The image provides the WAF engine and Nginx module. It does not bundle a default OWASP Core Rule Set configuration, so production deployments should mount their own ModSecurity configuration and rules.
 
-- [Introduction](#introduction)
-- [Features](#features)
-- [Quick Start](#quick-start)
-- [Image Tags](#image-tags)
-- [Supported Versions](#supported-versions)
-- [Usage Guide](#usage-guide)
-- [Version Management](#version-management)
-- [Custom Build](#custom-build)
-- [Development Guide](#development-guide)
-- [Contributing](#contributing)
-- [License](#license)
+## Current Published Matrix
 
-## Introduction
+The current CI build matrix is defined in [`build-matrix.json`](build-matrix.json):
 
-This project provides a ready-to-use Nginx + ModSecurity Web Application Firewall (WAF) solution, designed to protect web applications from common attacks such as SQL injection, XSS, CSRF, and more.
+| Channel | Nginx | ModSecurity | modsecurity-nginx | Dockerfile |
+| --- | --- | --- | --- | --- |
+| `mainline` / `latest` | `1.31.0` | `v3.0.15` | `v1.0.4` | `nginx-1.31.0/mod-3.0.15/Dockerfile` |
+| `stable` | `1.30.1` | `v3.0.15` | `v1.0.4` | `nginx-1.30.1/mod-3.0.15/Dockerfile` |
 
-### Why Choose This Image?
+Older version directories remain in the repository as historical build definitions, but only entries listed in `build-matrix.json` are built and published by the current GitHub Actions workflow.
 
-- **Lightweight**: Based on Alpine Linux, image size is only ~60MB
-- **Security First**: Integrated with OWASP ModSecurity v3 engine for enterprise-grade WAF protection
-- **Multi-stage Build**: Uses Docker multi-stage build to reduce attack surface
-- **Continuous Updates**: Automated CI/CD pipeline ensures timely security patches
-- **Production Ready**: Optimized configuration and runtime dependencies suitable for production deployment
+## Image Registries
 
-### Use Cases
-
-- Protect web applications and APIs from OWASP Top 10 threats
-- Deploy as a reverse proxy WAF to provide unified security protection for backend services
-- Edge security gateway in microservices architecture
-- Application-layer firewall in containerized environments
-
-## Features
-
-### Core Features
-
-- ✅ **Latest Version Support**: Nginx 1.29.4 + ModSecurity v3.0.14
-- ✅ **Alpine Linux Based**: Extremely lightweight with security hardening
-- ✅ **Dynamic Module Loading**: ModSecurity compiled as a dynamic module
-- ✅ **Complete Runtime Dependencies**: Includes Lua 5.4, LMDB, YAJL, GeoIP, etc.
-- ✅ **Multi-Architecture Support**: Native support for AMD64 (x86_64) and ARM64 (aarch64)
-
-## Quick Start
-
-### Pull Image
-
-From Docker Hub:
+Images are published to both Docker Hub and GitHub Container Registry:
 
 ```bash
 docker pull e1saps/nginx-modsecurity:latest
+docker pull ghcr.io/apts-1547/nginx-modsecurity:latest
 ```
 
-Or from GitHub Container Registry:
+Use Docker Hub if you do not have a registry preference. Use GHCR when your deployment workflow already authenticates against GitHub Packages.
+
+## Tags
+
+Each matrix entry is published with a version tag and a plain Nginx version tag:
+
+| Tag | Example | Meaning |
+| --- | --- | --- |
+| `<nginx-version>-<modsecurity-version>` | `1.31.0-3.0.15` | Exact Nginx and ModSecurity pair |
+| `<nginx-version>` | `1.31.0` | Alias for the Nginx version's current ModSecurity pair |
+| `latest` | `latest` | Current `mainline` build |
+| `mainline` | `mainline` | Current Nginx mainline build |
+| `stable` | `stable` | Current Nginx stable build |
+
+For production, prefer the full version tag, for example:
 
 ```bash
-docker pull ghcr.io/e1saps/nginx-modsecurity:latest
+docker pull e1saps/nginx-modsecurity:1.30.1-3.0.15
 ```
 
-### Basic Run
+That avoids accidental upgrades when `latest`, `mainline`, or `stable` move.
 
-Start a simple Nginx + ModSecurity container:
+## Quick Start
+
+Run the latest mainline image:
 
 ```bash
-docker run -d \
-  --name nginx-modsec \
-  -p 80:80 \
-  -p 443:443 \
-  e1saps/nginx-modsecurity:latest
+docker run --rm -p 8080:80 e1saps/nginx-modsecurity:latest
 ```
 
-Verify container status:
+Then check the default Nginx page:
 
 ```bash
-docker ps
-docker logs nginx-modsec
-curl http://localhost
+curl http://localhost:8080/
 ```
 
-## Image Tags
+This confirms that Nginx starts. To actually inspect traffic with ModSecurity, add a ModSecurity configuration and enable it in your Nginx server or location block.
 
-| Tag Format | Example | Description |
-|-----------|---------|-------------|
-| `latest` | `latest` | Latest mainline version with newest features |
-| `mainline` | `mainline` | Latest mainline version, same as `latest` |
-| `stable` | `stable` | Latest stable version, focused on bug fixes |
-| `<nginx-version>` | `1.29.4` | Specific Nginx version |
-| `<nginx-version>-<modsec-version>` | `1.29.4-3.0.14` | Specific version combination (recommended for production) |
+## Enabling The Module
 
-**Production Recommendation**: Use specific version tags (e.g., `1.29.4-3.0.14`) to ensure environment consistency. If tracking latest versions, prefer `stable` tag over `latest`/`mainline`.
+The image places the module loader at:
 
-## Supported Versions
-
-This project maintains images for the following Nginx versions:
-
-| Nginx Version | ModSecurity Version | Status |
-|--------------|-------------------|--------|
-| 1.29.4 | v3.0.14 | ✅ Latest |
-| 1.28.1 | v3.0.14 | ✅ Stable |
-| 1.26.3 | v3.0.14 | ✅ LTS |
-| 1.24.0 | v3.0.14 | ⚠️ Maintained |
-| 1.22.1 | v3.0.14 | ⚠️ Maintained |
-| 1.20.2 | v3.0.14 | ⚠️ Legacy |
-| 1.18.0 | v3.0.14 | ⚠️ Legacy |
-| 1.16.1 | v3.0.14 | ⚠️ Legacy |
-| 1.14.2 | v3.0.14 | ⚠️ Legacy |
-
-**Update Strategy**:
-
-- Starting from 2025-10-16, pushing Nginx mainline versions; previous versions remain stable
-- ModSecurity version stays on v3.x latest stable branch
-- Regular security patch updates
-- Mainline versions include latest features and improvements, stable versions focus on bug fixes
-
-## Usage Guide
-
-### Using Custom Configuration
-
-```bash
-docker run -d \
-  --name nginx-modsec \
-  -p 80:80 \
-  -p 443:443 \
-  -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf:ro \
-  -v $(pwd)/modsec:/etc/nginx/modsec:ro \
-  -v $(pwd)/logs:/var/log/nginx \
-  e1saps/nginx-modsecurity:latest
+```text
+/etc/nginx/modules-enabled/50-modsecurity.conf
 ```
 
-### Using Docker Compose
-
-Create a `docker-compose.yml` file:
-
-```yaml
-version: '3.8'
-
-services:
-  nginx-modsecurity:
-    image: e1saps/nginx-modsecurity:latest
-    container_name: nginx-modsec
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./config/modsec:/etc/nginx/modsec:ro
-      - ./logs:/var/log/nginx
-      - ./html:/usr/share/nginx/html:ro
-    networks:
-      - web
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-networks:
-  web:
-    driver: bridge
-```
-
-Start services:
-
-```bash
-docker-compose up -d
-```
-
-### Configuring ModSecurity
-
-#### Module Loading Method
-
-**Important Notice**: Starting from version 1.29.2, the ModSecurity module loading method has changed.
-
-- **Version 1.29.2 and earlier**: Module is automatically loaded into `/etc/nginx/nginx.conf`, no additional configuration needed
-- **After version 1.29.2**: Module configuration file is located at `/etc/nginx/modules-available/50-modsecurity.conf`
-
-For newer versions (after 1.29.2), add this to the top of your `nginx.conf`:
+If you replace `/etc/nginx/nginx.conf`, make sure your custom file includes enabled modules before the `events` block:
 
 ```nginx
 include /etc/nginx/modules-enabled/*.conf;
-```
 
-#### Enabling ModSecurity
+events {}
 
-Enable ModSecurity in your Nginx configuration:
+http {
+    server {
+        listen 80;
 
-```nginx
-server {
-    listen 80;
-    server_name example.com;
+        modsecurity on;
+        modsecurity_rules_file /etc/nginx/modsec/modsecurity.conf;
 
-    # Enable ModSecurity
-    modsecurity on;
-    modsecurity_rules_file /etc/nginx/modsec/modsecurity.conf;
-
-    location / {
-        root /usr/share/nginx/html;
-        index index.html;
+        location / {
+            proxy_pass http://app:3000;
+        }
     }
 }
 ```
 
-For detailed ModSecurity configuration and OWASP CRS integration, please refer to:
+If you only mount files under `/etc/nginx/conf.d/`, the default Nginx image entrypoint keeps the base `nginx.conf`, so the loader behavior depends on that base configuration. When in doubt, provide a complete `nginx.conf` with the `include /etc/nginx/modules-enabled/*.conf;` line.
 
-- [ModSecurity Official Documentation](https://github.com/SpiderLabs/ModSecurity/wiki)
-- [OWASP CRS Project](https://coreruleset.org/)
+## Example With Custom Rules
 
-## Version Management
+Create a minimal ModSecurity configuration:
 
-This project uses the `update.sh` script to manage builds for different versions.
+```apache
+# ./modsec/modsecurity.conf
+SecRuleEngine On
+SecRequestBodyAccess On
+SecResponseBodyAccess Off
+SecAuditEngine RelevantOnly
+SecAuditLog /var/log/nginx/modsec_audit.log
 
-### Update to New Version
-
-```bash
-# Basic usage
-./update.sh <NGINX_VERSION> <MODSECURITY_VERSION> <MODSECURITY_NGINX_VERSION>
-
-# Example
-./update.sh 1.29.4 v3.0.14 v1.0.4
-
-# Auto commit and push (optional)
-./update.sh 1.29.4 v3.0.14 v1.0.4 true
+SecRule ARGS:test "@contains attack" "id:1000,phase:2,deny,status:403,msg:'Test ModSecurity rule'"
 ```
 
-### Script Functions
+Create an Nginx config that loads the module and uses that rules file:
 
-After running the script:
+```nginx
+# ./nginx.conf
+include /etc/nginx/modules-enabled/*.conf;
 
-1. Creates versioned directory: `nginx-<version>/mod-<version>/`
-2. Generates Dockerfile and README for that version
-3. Updates `Dockerfile.latest` in root directory
-4. Updates `versions.env` version information file
+events {}
 
-### View Current Version
+http {
+    server {
+        listen 80;
 
-```bash
-cat versions.env
+        modsecurity on;
+        modsecurity_rules_file /etc/nginx/modsec/modsecurity.conf;
+
+        location / {
+            return 200 "nginx-modsecurity is running\n";
+        }
+    }
+}
 ```
 
-## Custom Build
-
-### Build Specific Version
+Run the container:
 
 ```bash
-cd nginx-1.29.4/mod-3.0.14
-docker build -t my-nginx-modsec:1.29.4-3.0.14 .
+docker run --rm \
+  -p 8080:80 \
+  -v "$PWD/nginx.conf:/etc/nginx/nginx.conf:ro" \
+  -v "$PWD/modsec:/etc/nginx/modsec:ro" \
+  e1saps/nginx-modsecurity:stable
 ```
 
-### Build Latest Version
+Test the rule:
 
 ```bash
-docker build -t my-nginx-modsec:latest -f Dockerfile.latest .
+curl "http://localhost:8080/?test=ok"
+curl -i "http://localhost:8080/?test=attack"
 ```
 
-### Multi-Architecture Build
+The second request should return `403` when the rule is active.
+
+## Docker Compose
+
+```yaml
+services:
+  waf:
+    image: e1saps/nginx-modsecurity:1.30.1-3.0.15
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./modsec:/etc/nginx/modsec:ro
+      - ./logs:/var/log/nginx
+    restart: unless-stopped
+```
+
+## Build Locally
+
+Build a specific version from its Dockerfile:
 
 ```bash
-# Create builder
-docker buildx create --name multiarch --use
+docker build \
+  -t nginx-modsecurity:1.31.0-3.0.15 \
+  -f nginx-1.31.0/mod-3.0.15/Dockerfile \
+  .
+```
 
-# Build and push
+Run it:
+
+```bash
+docker run --rm -p 8080:80 nginx-modsecurity:1.31.0-3.0.15
+```
+
+For multi-architecture publishing, use Buildx:
+
+```bash
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -t my-registry/nginx-modsecurity:latest \
-  -f Dockerfile.latest \
-  --push .
+  -t your-registry/nginx-modsecurity:1.31.0-3.0.15 \
+  -f nginx-1.31.0/mod-3.0.15/Dockerfile \
+  --push \
+  .
 ```
 
-## Development Guide
+## Adding Or Updating A Version
 
-### Environment Setup
+Use [`update.sh`](update.sh) to create a new version directory from the nearest existing template with the same ModSecurity version:
 
 ```bash
-git clone https://github.com/AptS-1547/nginx-modsecurity.git
-cd nginx-modsecurity
-docker build -t nginx-modsecurity:dev -f Dockerfile.latest .
+./update.sh <NGINX_VERSION> <MODSECURITY_VERSION> <MODSECURITY_NGINX_VERSION> [ROLE]
 ```
 
-### Add New Version
+Example:
 
 ```bash
-./update.sh 1.29.0 v3.0.14 v1.0.4
-cd nginx-1.29.0/mod-3.0.14
-docker build -t test:1.29.0-3.0.14 .
+./update.sh 1.31.1 v3.0.15 v1.0.4 mainline
 ```
 
-### Testing
+The script:
 
-```bash
-# Test image build
-docker build -t test:latest -f Dockerfile.latest .
+1. Creates `nginx-<nginx-version>/mod-<modsecurity-version>/Dockerfile`
+2. Replaces the Nginx and connector versions in the copied Dockerfile
+3. Updates the `build_date` label
+4. Replaces or appends the matching `role` entry in `build-matrix.json`
 
-# Test run
-docker run -d --name test-waf -p 8080:80 test:latest
-curl http://localhost:8080/
-docker rm -f test-waf
+Valid roles are currently interpreted by CI as:
+
+| Role | Published channel tags |
+| --- | --- |
+| `mainline` | `latest`, `mainline` |
+| `stable` | `stable` |
+
+After running the script, review the generated Dockerfile before committing. Different Nginx or ModSecurity versions sometimes require small build fixes.
+
+## CI Publishing Flow
+
+The GitHub Actions workflow at [`.github/workflows/docker-image.yml`](.github/workflows/docker-image.yml) runs on pushes to `master` that modify `build-matrix.json` or versioned Dockerfiles. It can also be started manually with `workflow_dispatch`.
+
+For each matrix entry, CI:
+
+1. Builds `linux/amd64` and `linux/arm64` images on native runners
+2. Pushes temporary architecture-specific images
+3. Creates a multi-architecture manifest for Docker Hub and GHCR
+4. Publishes version tags and channel tags based on the matrix role
+5. Skips an existing full version tag unless the manual `force_rebuild` input is enabled
+
+## Project Layout
+
+```text
+.
+├── build-matrix.json
+├── update.sh
+├── nginx-1.31.0/
+│   └── mod-3.0.15/
+│       └── Dockerfile
+├── nginx-1.30.1/
+│   └── mod-3.0.15/
+│       └── Dockerfile
+└── .github/
+    └── workflows/
+        └── docker-image.yml
 ```
 
-### CI/CD Workflow
+Older `nginx-*` directories follow the same layout.
 
-This project uses GitHub Actions for automated building and publishing:
+## Security Notes
 
-- **Trigger Conditions**: Push to master branch or create Tag
-- **Build Targets**: Docker Hub and GitHub Container Registry
-- **Build Matrix (Future)**: Multi-architecture builds (AMD64, ARM64)
+- Keep production deployments on exact version tags.
+- Mount your own ModSecurity rules and audit-log policy.
+- Test rule changes in detection-only mode before switching to blocking mode.
+- Treat WAF logs as sensitive data because they may contain request bodies, tokens, or user input.
+- Rebuild when upstream Nginx, Alpine, or ModSecurity security updates matter to your deployment.
 
-### Contributing Code
+## Related Projects
 
-1. Fork this repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add some amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Submit a Pull Request
-
-## Contributing
-
-Contributions are welcome in the following ways:
-
-- 🐛 Report Bugs: Submit in [Issues](https://github.com/AptS-1547/nginx-modsecurity/issues)
-- 💡 Feature Suggestions: Discuss in [Issues](https://github.com/AptS-1547/nginx-modsecurity/issues)
-- 📖 Improve Documentation: Submit Pull Request
-- 🔧 Code Contributions: Submit Pull Request
+- [Nginx](https://nginx.org/)
+- [ModSecurity](https://github.com/owasp-modsecurity/ModSecurity)
+- [ModSecurity-nginx](https://github.com/owasp-modsecurity/ModSecurity-nginx)
+- [OWASP Core Rule Set](https://coreruleset.org/)
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
----
-
-## Related Resources
-
-- [Nginx Official Documentation](https://nginx.org/en/docs/)
-- [ModSecurity Official Documentation](https://github.com/SpiderLabs/ModSecurity)
-- [OWASP CRS Project](https://coreruleset.org/)
-- [Docker Official Documentation](https://docs.docker.com/)
-
-## Feedback
-
-For any questions or suggestions, please contact us via:
-
-- GitHub Issues: <https://github.com/AptS-1547/nginx-modsecurity/issues>
-- Email: <apts-1547@esaps.net>
-
-If this project helps you, please give it a ⭐️ Star!
