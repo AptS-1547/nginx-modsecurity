@@ -19,13 +19,16 @@ permissions:
   packages: write
 
 env:
-  REGISTRY_IMAGE_GHCR: ghcr.io/apts-1547/asterdrive
+  REGISTRY_IMAGE_DOCKERHUB: e1saps/nginx-modsecurity
+  REGISTRY_IMAGE_GHCR: ghcr.io/apts-1547/nginx-modsecurity
+  TEMP_IMAGE_TAG: build-${{ github.run_id }}
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      build_matrix: ${{ steps.set-matrix.outputs.build_matrix }}
+      platform_matrix: ${{ steps.set-matrix.outputs.platform_matrix }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,15 +36,31 @@ jobs:
       - name: Generate build matrix
         id: set-matrix
         run: |
-          MATRIX=$(jq -c '{include: .builds}' build-matrix.json)
-          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
-          echo "构建矩阵: ${MATRIX}"
+          BUILD_MATRIX="$(jq -c '{include: .builds}' build-matrix.json)"
+          PLATFORM_MATRIX="$(
+            jq -c '{
+              include: [
+                .builds[] as $build
+                | [
+                    { platform: "linux/amd64", arch: "amd64", runner: "ubuntu-latest" },
+                    { platform: "linux/arm64", arch: "arm64", runner: "ubuntu-24.04-arm" }
+                  ][]
+                | $build + .
+              ]
+            }' build-matrix.json
+          )"
 
-  build-and-push:
+          echo "build_matrix=${BUILD_MATRIX}" >> "$GITHUB_OUTPUT"
+          echo "platform_matrix=${PLATFORM_MATRIX}" >> "$GITHUB_OUTPUT"
+          echo "构建矩阵: ${BUILD_MATRIX}"
+          echo "平台构建矩阵: ${PLATFORM_MATRIX}"
+
+  build:
+    name: Build ${{ matrix.nginx }} ${{ matrix.arch }}
     needs: prepare
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
-      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.prepare.outputs.platform_matrix) }}
       fail-fast: false
 
     steps:
@@ -61,16 +80,85 @@ jobs:
         if: ${{ github.event.inputs.force_rebuild != 'true' }}
         run: |
           TAG="${{ steps.vars.outputs.version_tag }}"
-          if docker manifest inspect "e1saps/nginx-modsecurity:${TAG}" > /dev/null 2>&1; then
+          if docker manifest inspect "${REGISTRY_IMAGE_DOCKERHUB}:${TAG}" > /dev/null 2>&1; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "镜像 e1saps/nginx-modsecurity:${TAG} 已存在，跳过构建"
+            echo "镜像 ${REGISTRY_IMAGE_DOCKERHUB}:${TAG} 已存在，跳过构建"
           else
             echo "skip=false" >> $GITHUB_OUTPUT
-            echo "镜像 e1saps/nginx-modsecurity:${TAG} 不存在，开始构建"
+            echo "镜像 ${REGISTRY_IMAGE_DOCKERHUB}:${TAG} 不存在，开始构建"
           fi
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        if: steps.check.outputs.skip != 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY_IMAGE_DOCKERHUB }}:${{ env.TEMP_IMAGE_TAG }}-${{ steps.vars.outputs.version_tag }}-${{ matrix.arch }}
+            ${{ env.REGISTRY_IMAGE_GHCR }}:${{ env.TEMP_IMAGE_TAG }}-${{ steps.vars.outputs.version_tag }}-${{ matrix.arch }}
+          labels: |
+            org.opencontainers.image.title=nginx-modsecurity
+            org.opencontainers.image.description=Nginx ${{ matrix.nginx }} with ModSecurity ${{ matrix.modsecurity }}
+            org.opencontainers.image.version=${{ steps.vars.outputs.version_tag }}
+          cache-from: |
+            type=gha,scope=docker-image-${{ steps.vars.outputs.version_tag }}-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY_IMAGE_GHCR }}:buildcache-${{ steps.vars.outputs.version_tag }}-${{ matrix.arch }}
+          cache-to: |
+            type=gha,mode=max,scope=docker-image-${{ steps.vars.outputs.version_tag }}-${{ matrix.arch }}
+            type=registry,ref=${{ env.REGISTRY_IMAGE_GHCR }}:buildcache-${{ steps.vars.outputs.version_tag }}-${{ matrix.arch }},mode=max
+
+  publish-manifest:
+    name: Publish ${{ matrix.nginx }} manifest
+    needs:
+      - prepare
+      - build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.build_matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Set version variables
+        id: vars
+        run: |
+          MODSEC_CLEAN="${{ matrix.modsecurity }}"
+          MODSEC_CLEAN="${MODSEC_CLEAN#v}"
+          echo "version_tag=${{ matrix.nginx }}-${MODSEC_CLEAN}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if image already exists
+        id: check
+        if: ${{ github.event.inputs.force_rebuild != 'true' }}
+        run: |
+          TAG="${{ steps.vars.outputs.version_tag }}"
+          if docker manifest inspect "${REGISTRY_IMAGE_DOCKERHUB}:${TAG}" > /dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "镜像 ${REGISTRY_IMAGE_DOCKERHUB}:${TAG} 已存在，跳过 manifest 发布"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "镜像 ${REGISTRY_IMAGE_DOCKERHUB}:${TAG} 不存在，开始发布 manifest"
+          fi
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.skip != 'true'
@@ -95,48 +183,76 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         id: tags
         run: |
-          TAGS=""
+          write_tags() {
+            local output_name="$1"
+            shift
+            {
+              echo "${output_name}<<EOF"
+              printf '%s\n' "$@"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          }
+
           VERSION_TAG="${{ steps.vars.outputs.version_tag }}"
           NGINX="${{ matrix.nginx }}"
           ROLE="${{ matrix.role }}"
-          GHCR_REPO="$(printf '%s' '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
 
-          # 版本 tag（始终添加）
-          TAGS="e1saps/nginx-modsecurity:${NGINX}"
-          TAGS="${TAGS},e1saps/nginx-modsecurity:${VERSION_TAG}"
-          TAGS="${TAGS},ghcr.io/${GHCR_REPO}:${NGINX}"
-          TAGS="${TAGS},ghcr.io/${GHCR_REPO}:${VERSION_TAG}"
+          DOCKERHUB_TAGS=(
+            "${REGISTRY_IMAGE_DOCKERHUB}:${NGINX}"
+            "${REGISTRY_IMAGE_DOCKERHUB}:${VERSION_TAG}"
+          )
+          GHCR_TAGS=(
+            "${REGISTRY_IMAGE_GHCR}:${NGINX}"
+            "${REGISTRY_IMAGE_GHCR}:${VERSION_TAG}"
+          )
 
-          # 角色 tag
           if [ "${ROLE}" = "mainline" ]; then
-            TAGS="${TAGS},e1saps/nginx-modsecurity:latest"
-            TAGS="${TAGS},e1saps/nginx-modsecurity:mainline"
-            TAGS="${TAGS},ghcr.io/${GHCR_REPO}:latest"
-            TAGS="${TAGS},ghcr.io/${GHCR_REPO}:mainline"
+            DOCKERHUB_TAGS+=(
+              "${REGISTRY_IMAGE_DOCKERHUB}:latest"
+              "${REGISTRY_IMAGE_DOCKERHUB}:mainline"
+            )
+            GHCR_TAGS+=(
+              "${REGISTRY_IMAGE_GHCR}:latest"
+              "${REGISTRY_IMAGE_GHCR}:mainline"
+            )
           elif [ "${ROLE}" = "stable" ]; then
-            TAGS="${TAGS},e1saps/nginx-modsecurity:stable"
-            TAGS="${TAGS},ghcr.io/${GHCR_REPO}:stable"
+            DOCKERHUB_TAGS+=("${REGISTRY_IMAGE_DOCKERHUB}:stable")
+            GHCR_TAGS+=("${REGISTRY_IMAGE_GHCR}:stable")
           fi
 
-          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
-          echo "生成的 tags: ${TAGS}"
+          write_tags dockerhub_tags "${DOCKERHUB_TAGS[@]}"
+          write_tags ghcr_tags "${GHCR_TAGS[@]}"
+          printf 'Docker Hub tags:\n%s\n' "${DOCKERHUB_TAGS[*]}"
+          printf 'GHCR tags:\n%s\n' "${GHCR_TAGS[*]}"
 
-      - name: Build and push
+      - name: Create multi-arch manifests
         if: steps.check.outputs.skip != 'true'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          file: ${{ matrix.dockerfile }}
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
-          labels: |
-            org.opencontainers.image.title=nginx-modsecurity
-            org.opencontainers.image.description=Nginx ${{ matrix.nginx }} with ModSecurity ${{ matrix.modsecurity }}
-            org.opencontainers.image.version=${{ steps.vars.outputs.version_tag }}
-          cache-from: |
-            type=gha,scope=docker-image
-            type=registry,ref=${{ env.REGISTRY_IMAGE_GHCR }}:buildcache
-          cache-to: |
-            type=gha,mode=max,scope=docker-image
-            type=registry,ref=${{ env.REGISTRY_IMAGE_GHCR }}:buildcache,mode=max
+        env:
+          VERSION_TAG: ${{ steps.vars.outputs.version_tag }}
+          DOCKERHUB_TAGS: ${{ steps.tags.outputs.dockerhub_tags }}
+          GHCR_TAGS: ${{ steps.tags.outputs.ghcr_tags }}
+        run: |
+          create_manifest() {
+            local tags="$1"
+            local image="$2"
+            local tag
+            local -a args=()
+
+            while IFS= read -r tag; do
+              if [ -n "$tag" ]; then
+                args+=("-t" "$tag")
+              fi
+            done <<< "$tags"
+
+            if [ "${#args[@]}" -eq 0 ]; then
+              echo "No manifest tags generated for ${image}" >&2
+              exit 1
+            fi
+
+            docker buildx imagetools create "${args[@]}" \
+              "${image}:${TEMP_IMAGE_TAG}-${VERSION_TAG}-amd64" \
+              "${image}:${TEMP_IMAGE_TAG}-${VERSION_TAG}-arm64"
+          }
+
+          create_manifest "$DOCKERHUB_TAGS" "$REGISTRY_IMAGE_DOCKERHUB"
+          create_manifest "$GHCR_TAGS" "$REGISTRY_IMAGE_GHCR"
