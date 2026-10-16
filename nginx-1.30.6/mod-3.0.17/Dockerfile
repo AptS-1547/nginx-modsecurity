@@ -2,7 +2,7 @@ FROM nginx:1.30.6-alpine AS builder
 
 # 设置 ModSecurity 版本
 ENV MODSECURITY_VERSION=v3.0.17
-ENV MODSECURITY_NGINX_VERSION=1.0.4
+ENV MODSECURITY_NGINX_VERSION=v1.0.4
 
 # 安装构建依赖
 RUN apk add --no-cache --virtual .build-deps \
@@ -87,6 +87,6 @@ COPY --from=builder /etc/nginx/modsec/unicode.mapping /etc/nginx/modsec/
 # 添加构建信息标签
 LABEL maintainer="AptS-1547 <apts-1547@esaps.net>" \
       nginx_version="1.30.6" \
-      modsecurity_version="v7" \
+      modsecurity_version="v3.0.17" \
       modsecurity_nginx_version="v1.0.4" \
       build_date="2026-10-16T06:04:33Z"
